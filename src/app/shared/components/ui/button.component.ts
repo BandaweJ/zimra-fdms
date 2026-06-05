@@ -9,7 +9,7 @@ import { NgClass } from '@angular/common';
     <button
       type="button"
       [disabled]="disabled || loading"
-      (click)="click.emit(); buttonClick.emit()"
+      (click)="buttonClick.emit()"
       class="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold transition
              disabled:cursor-not-allowed disabled:opacity-50"
       [ngClass]="[variantClasses, sizeClasses]"
@@ -29,7 +29,6 @@ export class ButtonComponent {
   @Input() loading = false;
   @Input() variant: 'primary' | 'secondary' | 'danger' | 'ghost' = 'primary';
   @Input() size: 'sm' | 'md' | 'lg' = 'md';
-  @Output() click = new EventEmitter<void>();
   @Output() buttonClick = new EventEmitter<void>();
 
   get variantClasses(): string {
@@ -58,4 +57,5 @@ export class ButtonComponent {
     }
   }
 }
+
 

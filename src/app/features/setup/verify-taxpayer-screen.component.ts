@@ -263,6 +263,7 @@ export class VerifyTaxpayerScreenComponent {
           this.loading.set(false);
         },
         error: (e) => {
+          console.error('[VerifyTaxpayer] Full error response:', e, 'error body:', (e as any)?.error);
           const code = this.extractErrorCode(e);
           if (code === 'DEV02') {
             this.dev02ActivationError.set(true);
@@ -320,8 +321,42 @@ export class VerifyTaxpayerScreenComponent {
 
   private formatError(e: unknown): string {
     const anyE = e as any;
-    const details = anyE?.error as ProblemDetails | undefined;
-    if (details?.title) return details.title;
+    const errBody = anyE?.error;
+
+    // Try interceptor-decorated UI error first
+    const uiFormError = errBody?.ui?.formError;
+    if (uiFormError && uiFormError !== `Request failed (HTTP ${anyE?.status}).`) {
+      return uiFormError;
+    }
+
+    // RFC7807 detail field (most specific server message)
+    if (typeof errBody?.detail === 'string' && errBody.detail) {
+      return errBody.detail;
+    }
+
+    // Field-level validation errors (ASP.NET style)
+    const validationErrors = errBody?.errors;
+    if (validationErrors && typeof validationErrors === 'object') {
+      const msgs: string[] = [];
+      for (const [field, fieldMsgs] of Object.entries(validationErrors as Record<string, unknown>)) {
+        if (Array.isArray(fieldMsgs)) {
+          msgs.push(`${field}: ${fieldMsgs.join(', ')}`);
+        } else if (typeof fieldMsgs === 'string') {
+          msgs.push(`${field}: ${fieldMsgs}`);
+        }
+      }
+      if (msgs.length) return msgs.join(' | ');
+    }
+
+    // ZIMRA errorCode with title
+    const errorCode = errBody?.errorCode;
+    const title = errBody?.title;
+    if (errorCode && title) return `${errorCode}: ${title}`;
+    if (title && title !== 'Unprocessable Entity') return title;
+
+    // Generic HTTP message
+    if (errorCode) return `Error ${errorCode}. Please check your input.`;
+    if (anyE?.status) return `Request failed (HTTP ${anyE.status}). Check input values and device context.`;
     return anyE?.message ? String(anyE.message) : 'Verification failed. Please try again.';
   }
 

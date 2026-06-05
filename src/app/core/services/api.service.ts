@@ -18,7 +18,11 @@ export class ApiService {
 
   private buildHeaders(headers?: Record<string, string>): HttpHeaders | undefined {
     if (!headers) return undefined;
-    return new HttpHeaders(headers);
+    const updated = { ...headers };
+    if (updated['DeviceModelVersion'] && !updated['DeviceModelVersionNo']) {
+      updated['DeviceModelVersionNo'] = updated['DeviceModelVersion'];
+    }
+    return new HttpHeaders(updated);
   }
 
   private buildParams(params?: Record<string, string | number | boolean>): HttpParams | undefined {
@@ -30,11 +34,22 @@ export class ApiService {
     return new HttpParams({ fromObject: entries });
   }
 
+  private getTargetUrl(path: string): string {
+    const base = this.baseUrl();
+    if (base.startsWith('https://fdmsapitest.zimra.co.zw')) {
+      return `/api-test${path}`;
+    }
+    if (base.startsWith('https://fdmsapi.zimra.co.zw')) {
+      return `/api-prod${path}`;
+    }
+    return `${base}${path}`;
+  }
+
   get<T>(
     path: string,
     options?: { params?: Record<string, string | number | boolean>; headers?: Record<string, string>; context?: HttpContext }
   ): Observable<T> {
-    const url = `${this.baseUrl()}${path}`;
+    const url = this.getTargetUrl(path);
     const params = this.buildParams(options?.params);
     const headers = this.buildHeaders(options?.headers);
     return this.http.get<T>(url, { params, headers, context: options?.context });
@@ -50,12 +65,17 @@ export class ApiService {
       context?: HttpContext;
     }
   ): Observable<T> {
-    const url = `${this.baseUrl()}${path}`;
+    const url = this.getTargetUrl(path);
     const params = this.buildParams(options?.params);
     const headers = {
+      'Content-Type': options?.contentType ?? 'application/json',
       ...(options?.headers ?? {}),
-      ...(options?.contentType ? { 'Content-Type': options.contentType } : {}),
     };
+
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      console.debug('[ApiService POST]', url, { headers, body });
+    }
+
     return this.http.post<T>(url, body, { params, headers: this.buildHeaders(headers), context: options?.context });
   }
 }

@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/api-test/:path*",
+      "destination": "https://fdmsapitest.zimra.co.zw/:path*"
+    },
+    {
+      "source": "/api-prod/:path*",
+      "destination": "https://fdmsapi.zimra.co.zw/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
